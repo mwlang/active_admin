@@ -37,12 +37,23 @@ inject_into_file 'app/models/blog/post.rb', %q{
   attr_accessible :author, :position unless Rails::VERSION::MAJOR > 3 && !defined? ProtectedAttributes
 }, after: 'class Blog::Post < ActiveRecord::Base'
 
+generate :model, "Status code:string"
+gsub_file(Dir['db/migrate/*_create_statuses.rb'][0], /\:statuses\sdo/, ":statuses, id: false, primary_key: :code do")
+inject_into_file 'app/models/status.rb', %q{
+  self.primary_key = :code
+  has_many :users, foreign_key: :status_code
+  def name
+    self.code || "[blank]"
+  end
+}, after: 'class Status < ActiveRecord::Base'
+
 
 generate :model, "profile user_id:integer bio:text"
-generate :model, "user type:string first_name:string last_name:string username:string age:integer"
+generate :model, "user type:string first_name:string last_name:string username:string age:integer status_code:string"
 inject_into_file 'app/models/user.rb', %q{
   has_many :posts, foreign_key: 'author_id'
   has_one :profile
+  belongs_to :status, foreign_key: :status_code
   accepts_nested_attributes_for :profile, allow_destroy: true
   def display_name
     "#{first_name} #{last_name}"
